@@ -8,8 +8,13 @@ function Projection.new(o)
     return o
 end
 
-function Projection:overlaps(other)
-    return not (other.high <= self.low or self.high <= other.low)
+function Projection:overlap(other)
+
+    if other.high <= self.low or self.high <= other.low then
+        return nil
+    else
+        return math.min(math.abs(self.low - other.high), math.abs(self.high - other.low))
+    end
 end
 
 return Projection

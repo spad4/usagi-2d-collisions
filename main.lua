@@ -27,22 +27,14 @@ function _update(dt)
 end
 
 local points = {
-    Vector2.new({ x = 64, y = 64 }),
-    Vector2.new({ x = 96, y = 64 }),
-    Vector2.new({ x = 96, y = 96 }),
-    Vector2.new({ x = 64, y = 96 }),
+    Vector2.new({ x = -16, y = -16 }),
+    Vector2.new({ x = 16, y = -16 }),
+    Vector2.new({ x = 16, y = 16 }),
+    Vector2.new({ x = -16, y = 16 }),
 }
 
-
-local points2 = {
-    Vector2.new({ x = 32, y = 63 }),
-    Vector2.new({ x = 96, y = 72 }),
-    Vector2.new({ x = 96, y = 96 }),
-    Vector2.new({ x = 32, y = 96 }),
-}
-
-local polygon = Polygon.new({ points = points, color = gfx.COLOR_RED })
-local polygon2 = Polygon.new({ points = points2, color = gfx.COLOR_YELLOW })
+local polygon = Polygon.new({ corners = points, color = gfx.COLOR_RED, x = 64, y = 64})
+local polygon2 = Polygon.new({ corners = points, color = gfx.COLOR_YELLOW })
 
 -- local test1 = Vector2.new({x = 5, y = 5})
 -- local test2 = Vector2.new({x = 10, y = 10})
@@ -50,25 +42,16 @@ local polygon2 = Polygon.new({ points = points2, color = gfx.COLOR_YELLOW })
 
 function _draw(dt)
     gfx.clear(gfx.COLOR_BLACK)
-    local vec = Vector2.new(util.vec_from_angle(Elapsed, 1))
-    local normal = vec:normal()
     
-    local mx, my = input.mouse()
-    local mp = {
-        Vector2.new({ x = mx - 12, y = my - 16 }),
-        Vector2.new({ x = mx + 16, y = my - 11 }),
-        Vector2.new({ x = mx + 11, y = my + 16 }),
-        Vector2.new({ x = mx - 16, y = my + 23 }),
-    }
+    polygon2:move_to(input.mouse())
     
-    
-    local mpoly = Polygon.new({points = mp, color = gfx.COLOR_RED})
-    local proj2 = mpoly:projection(normal)
-    
-    local color = polygon:collides_with(mpoly) and gfx.COLOR_TRUE_WHITE or gfx.COLOR_RED
+    polygon:calculate_points_in_space()
+    polygon2:calculate_points_in_space()
+
+    local color = polygon:collide_with(polygon2).occurred and gfx.COLOR_TRUE_WHITE or gfx.COLOR_RED
     polygon.color = color
-    mpoly.color = color
+    polygon2.color = color
     
-    mpoly:draw()
     polygon:draw()
+    polygon2:draw()
 end

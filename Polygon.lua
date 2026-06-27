@@ -1,6 +1,7 @@
 local Polygon = {
-    points = { { x = 1, y = 1 }, { x = 2, y = 2 } },
-    x = 5,
+    corners = { { x = -1, y = -1 }, { x = 2, y = 2 } },
+    points = { { x = -1, y = -1 }, { x = 2, y = 2 } },
+    x = 0,
     y = 0,
     dx = 0,
     dy = 0,
@@ -8,6 +9,16 @@ local Polygon = {
     omega = 0,
     color = gfx.COLOR_TRUE_WHITE
 }
+
+local Collision_Result = {
+    occurred = false,
+    penetration = math.maxinteger,
+    direction = { x = 0, y = 0 }
+}
+
+function Collision_Result.new(o)
+    return setmetatable(o, { __index = Collision_Result })
+end
 
 local colors = {
     gfx.COLOR_BLUE,
@@ -33,9 +44,23 @@ function Polygon:projection(normal)
     return proj
 end
 
-function Polygon:collides_on_my_axes(other)
+function Polygon:point_in_space(corner)
+    return Vector2.new({ x = corner.x + self.x, y = corner.y + self.y })
+end
+
+function Polygon:calculate_points_in_space()
+    local final = {}
+    for i, corner in pairs(self.corners) do
+        final[i] = self:point_in_space(corner)
+    end
+
+    self.points = final
+end
+
+function Polygon:collides_on_my_axes(other, collision)
     local prev_point = self.points[#self.points]
     for i, point in pairs(self.points) do
+
         local tangent = Vector2.new(util.vec_normalize(point - prev_point))
         local normal = tangent:normal()
 
@@ -52,21 +77,41 @@ function Polygon:collides_on_my_axes(other)
         --     64 + 8 * (i + 1) + normal.y * o_proj.high / 1, colors[i]
         -- )
 
-        if not my_proj:overlaps(o_proj) then
-            return false
+        local penetration = my_proj:overlap(o_proj)
+        if penetration then
+            if penetration < collision.penetration then
+                collision.penetration = penetration
+                collision.direction = normal
+            end
+        else
+            collision.occurred = false
+            return collision
         end
         prev_point = point
     end
 
-    return true
+    collision.occurred = true
+    return collision
 end
 
-function Polygon:collides_with(other)
-    return self:collides_on_my_axes(other) and other:collides_on_my_axes(self)
+function Polygon:collide_with(other)
+    local collision = Collision_Result.new({})
+
+    local result = self:collides_on_my_axes(other, collision)
+    if result.occurred then
+        return result
+    end
+
+    result = other:collides_on_my_axes(self, collision)
+    return result
 end
 
 function Polygon:apply_motion(dt)
 
+end
+
+function Polygon:move_to(x, y)
+    self.x, self.y = x, y
 end
 
 function Polygon:draw()
@@ -81,8 +126,8 @@ function Polygon:draw()
         -- local tangent = Vector2.new(util.vec_normalize(p2 - p1))
         -- local normal = tangent:normal()
 
-        -- gfx.line(hx, hy, hx + normal.x * 16, hy + normal.y * 16, colors[(i % #colors) + 1])
-        -- gfx.line(p1.x, p1.y, p2.x, p2.y, colors[(i % #colors) + 1])
+        -- gfx.line(hx, hy, hx + normal.x * 16, hy + normal.y * 16, colors[((i-1) % #colors) + 1])
+        -- gfx.line(p1.x, p1.y, p2.x, p2.y, colors[((i-1) % #colors) + 1])
         gfx.line(p1.x, p1.y, p2.x, p2.y, self.color)
     end
 end
