@@ -21,39 +21,61 @@ local points = {
     Vector2.new({ x = 16, y = 16 }),
     Vector2.new({ x = -16, y = 16 }),
 }
-local points2 = {
-    Vector2.new({ x = 0, y = 0 }),
+local pentagon = {
+    Vector2.new({ x = -16, y = -16 }),
+    Vector2.new({ x = 16, y = -16 }),
+    Vector2.new({ x = 24, y = 8 }),
+    Vector2.new({ x = 0, y = 24 }),
+    Vector2.new({ x = -24, y = 8 }),
+}
+local hexagon = {
+    Vector2.new({ x = -16, y = -16 }),
+    Vector2.new({ x = 16, y = -16 }),
+    Vector2.new({ x = 32, y = 8 }),
     Vector2.new({ x = 16, y = 32 }),
-    Vector2.new({ x = 32, y = 32 }),
-    Vector2.new({ x = 32, y = 16 }),
+    Vector2.new({ x = -16, y = 32 }),
+    Vector2.new({ x = -32, y = 8 }),
 }
 
 local polygon = Polygon.new({ corners = points, color = gfx.COLOR_RED, x = 64, y = 64 })
-local polygon2 = Polygon.new({ corners = points, color = gfx.COLOR_YELLOW })
+local polygon2 = Polygon.new({ corners = pentagon, color = gfx.COLOR_RED, x = 128, y = 128 })
+local polygon3 = Polygon.new({ corners = hexagon, color = gfx.COLOR_RED, x = 192, y = 128 })
 
-Polygons = { polygon, polygon2 }
+Polygons = { polygon, polygon2, polygon3 }
 
 function _update(dt)
     Elapsed += dt
 
-    polygon:calculate_points_in_space()
-    polygon2:calculate_points_in_space()
+    if input.mouse_released(input.MOUSE_LEFT) then
+        Selected = nil
+    end
+
+    for _, poly in pairs(Polygons) do
+        poly:calculate_points_in_space()
+        poly.color = gfx.COLOR_RED
+    end
 
     for i = 1, #Polygons do
         local first = Polygons[i]
-        if input.mouse_held(input.MOUSE_LEFT) and first:encloses(input.mouse()) then
-            first.x, first.y = input.mouse()
-            first.theta += input.mouse_scroll() * math.pi / 10
+
+        if input.mouse_pressed(input.MOUSE_LEFT) and first:encloses(input.mouse()) then
+            Selected = first
         end
+
+        if Selected == first then
+            first.x, first.y = input.mouse()
+            first.theta += input.mouse_scroll() * math.pi / 8
+        end
+
         if i == #Polygons then goto continue end
-        for j = 2, #Polygons do
+        for j = i+1, #Polygons do
             local second = Polygons[j]
-            if first:collision_with(second).occurred then
+            local result = first:collision_with(second)
+            if result.occurred then
                 first.color = gfx.COLOR_TRUE_WHITE
                 second.color = gfx.COLOR_TRUE_WHITE
-            else
-                first.color = gfx.COLOR_RED
-                second.color = gfx.COLOR_RED
+                -- first.x, first.y = first.x + result.direction.x * result.penetration / 2, first.y + result.direction.y * result.penetration / 2
+                -- second.x, second.y = second.x + result.direction.x * result.penetration / -2, second.y + result.direction.y * result.penetration / -2
             end
         end
         ::continue::
@@ -67,10 +89,10 @@ end
 function _draw(dt)
     gfx.clear(gfx.COLOR_BLACK)
 
-    polygon:draw()
-    polygon2:draw()
+    for _, poly in pairs(Polygons) do
+        poly:draw_filled()
+    end
 
     local mx, my = input.mouse()
     gfx.px(mx, my, gfx.COLOR_TRUE_WHITE)
-
 end

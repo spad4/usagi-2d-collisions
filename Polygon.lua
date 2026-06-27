@@ -7,7 +7,8 @@ local Polygon = {
     dy = 0,
     theta = 0,
     omega = 0,
-    color = gfx.COLOR_TRUE_WHITE
+    color = gfx.COLOR_TRUE_WHITE,
+    colliding = false
 }
 
 local Collision_Result = {
@@ -29,7 +30,9 @@ local colors = {
 }
 
 function Polygon.new(o)
-    return setmetatable(o, { __index = Polygon })
+    o = setmetatable(o, { __index = Polygon })
+    o:calculate_points_in_space()
+    return o
 end
 
 function Polygon:projection(normal)
@@ -125,8 +128,8 @@ function Polygon:encloses(x1, y1)
 
     local count = 0
 
-    local x2, y2 = x1 + 100, y1
     local prev_point = self.points[#self.points]
+    local x2, y2 = x1 + prev_point.x, y1 + prev_point.y
     for i, point in pairs(self.points) do
         local x3, y3 = prev_point.x, prev_point.y
         local x4, y4 = point.x, point.y
@@ -221,5 +224,48 @@ function Polygon:draw()
         gfx.line(p1.x, p1.y, p2.x, p2.y, self.color)
     end
 end
+
+function Polygon:draw_filled()
+
+    local points = self.points
+    -- local color_i = 1
+
+    while #points > 2 do
+        local next = {points[1]}
+        local length = #points
+
+        for i = 1, length - 1, 2 do
+            local p1 = points[i]
+            local p2 = points[i+1]
+            local last_ind = i + 2 > length and 1 or i + 2
+            local p3 = points[last_ind]
+
+            table.insert(next, p3)
+            -- gfx.tri_fill(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, self.color == 0 and gfx.COLOR_TRUE_WHITE or colors[(color_i % 4) + 1])
+            gfx.tri_fill(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, self.color)
+            -- color_i += 1
+        end
+
+        points = next
+
+    end
+
+    -- local length = #self.points
+    -- for i = 1, length do
+    --     local p1 = self.points[i]
+    --     local p2 = self.points[i == length and 1 or i + 1]
+
+    --     -- local hx = p1.x + (p2.x - p1.x) / 2
+    --     -- local hy = p1.y + (p2.y - p1.y) / 2
+
+    --     -- local tangent = Vector2.new(util.vec_normalize(p2 - p1))
+    --     -- local normal = tangent:normal()
+
+    --     -- gfx.line(hx, hy, hx + normal.x * 16, hy + normal.y * 16, colors[((i-1) % #colors) + 1])
+    --     -- gfx.line(p1.x, p1.y, p2.x, p2.y, colors[((i-1) % #colors) + 1])
+    --     gfx.line(p1.x, p1.y, p2.x, p2.y, self.color)
+    -- end
+end
+
 
 return Polygon
