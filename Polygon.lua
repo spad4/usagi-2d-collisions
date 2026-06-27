@@ -61,6 +61,83 @@ function Polygon:calculate_points_in_space()
     self.points = final
 end
 
+local function between(v, low, high)
+    return v <= high and v >= low
+end
+
+local function cross_product(x1, x2, y1, y2)
+    return x1 * y2 - y1 * x2
+end
+
+local function equal_points(x1, y1, x2, y2)
+    return x1 == x2 and y1 == y2
+end
+
+local function all_equal(...)
+    local arg = { ... }
+
+    if #arg > 0 then
+        local value = arg[1]
+        for i, v in pairs(arg) do
+            if v ~= value then
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
+local function lines_intersect(x1, y1, x2, y2, x3, y3, x4, y4)
+    local px, py = x1, y1
+    local rx, ry = x2 - x1, y2 - y1
+
+    local qx, qy = x3, y3
+    local sx, sy = x4 - x3, y4 - y3
+
+    local dx, dy = qx - px, qy - py
+
+    local t = cross_product(dx, dy, sx, sy) / cross_product(rx, ry, sx, sy)
+    local u = cross_product(dx, dy, rx, ry) / cross_product(rx, ry, sx, sy)
+
+    local rxs = cross_product(rx, ry, sx, sy)
+    local dxr = cross_product(dx, dy, rx, ry)
+
+    if rxs == 0 and dxr == 0 then -- lines are collinear
+        -- points are touching
+        if (equal_points(px, py, qx, qy) or equal_points(x2, y2, qx, qy) or equal_points(px, py, x4, y4) or equal_points(x3, y3, x4, y4)) then
+            return true
+        end
+
+        -- check if lines overlap
+        return not all_equal(x3 - x1 < 0, x3 - x2 < 0, x4 - x1 < 0, x4 - x2 < 0)
+            or not all_equal(y3 - y1 < 0, y3 - y2 < 0, y4 - y1 < 0, y4 - y2 < 0)
+    elseif rxs == 0 and dxr ~= 0 then -- lines are parallel
+        return false
+    elseif rxs ~= 0 then
+        return between(t, 0, 1) and between(u, 0, 1)
+    end
+
+    return false
+end
+
+function Polygon:encloses(x1, y1)
+
+    local count = 0
+
+    local x2, y2 = x1 + 100, y1
+    local prev_point = self.points[#self.points]
+    for i, point in pairs(self.points) do
+        local x3, y3 = prev_point.x, prev_point.y
+        local x4, y4 = point.x, point.y
+        if lines_intersect(x1, y1, x2, y2, x3, y3, x4, y4) then
+            count += 1
+        end
+        prev_point = point
+    end
+    return count % 2 ~= 0
+end
+
 function Polygon:collides_on_my_axes(other, collision)
     local prev_point = self.points[#self.points]
     for i, point in pairs(self.points) do
@@ -98,7 +175,7 @@ function Polygon:collides_on_my_axes(other, collision)
     return collision
 end
 
-function Polygon:collide_with(other)
+function Polygon:collision_with(other)
     local collision = Collision_Result.new({})
     local collision2 = Collision_Result.new({})
 

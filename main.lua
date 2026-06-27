@@ -12,16 +12,7 @@ function _init()
     Polygons = {}
     Elapsed = 0
     Debug = true
-    Theta = 0
-end
-
-function _update(dt)
-    Elapsed += dt
-
-    if input.mouse_scroll() then
-        Theta += input.mouse_scroll() * math.pi / 16
-    end
-
+    Selected = nil
 end
 
 local points = {
@@ -37,8 +28,37 @@ local points2 = {
     Vector2.new({ x = 32, y = 16 }),
 }
 
-local polygon = Polygon.new({ corners = points, color = gfx.COLOR_RED, x = 64, y = 64})
-local polygon2 = Polygon.new({ corners = points2, color = gfx.COLOR_YELLOW })
+local polygon = Polygon.new({ corners = points, color = gfx.COLOR_RED, x = 64, y = 64 })
+local polygon2 = Polygon.new({ corners = points, color = gfx.COLOR_YELLOW })
+
+Polygons = { polygon, polygon2 }
+
+function _update(dt)
+    Elapsed += dt
+
+    polygon:calculate_points_in_space()
+    polygon2:calculate_points_in_space()
+
+    for i = 1, #Polygons do
+        local first = Polygons[i]
+        if input.mouse_held(input.MOUSE_LEFT) and first:encloses(input.mouse()) then
+            first.x, first.y = input.mouse()
+            first.theta += input.mouse_scroll() * math.pi / 10
+        end
+        if i == #Polygons then goto continue end
+        for j = 2, #Polygons do
+            local second = Polygons[j]
+            if first:collision_with(second).occurred then
+                first.color = gfx.COLOR_TRUE_WHITE
+                second.color = gfx.COLOR_TRUE_WHITE
+            else
+                first.color = gfx.COLOR_RED
+                second.color = gfx.COLOR_RED
+            end
+        end
+        ::continue::
+    end
+end
 
 -- local test1 = Vector2.new({x = 5, y = 5})
 -- local test2 = Vector2.new({x = 10, y = 10})
@@ -46,17 +66,11 @@ local polygon2 = Polygon.new({ corners = points2, color = gfx.COLOR_YELLOW })
 
 function _draw(dt)
     gfx.clear(gfx.COLOR_BLACK)
-    
-    polygon2:move_to(input.mouse())
-    polygon2:rotate_to(Theta)
 
-    polygon:calculate_points_in_space()
-    polygon2:calculate_points_in_space()
-
-    local color = polygon:collide_with(polygon2).occurred and gfx.COLOR_TRUE_WHITE or gfx.COLOR_RED
-    polygon.color = color
-    polygon2.color = color
-    
     polygon:draw()
     polygon2:draw()
+
+    local mx, my = input.mouse()
+    gfx.px(mx, my, gfx.COLOR_TRUE_WHITE)
+
 end
