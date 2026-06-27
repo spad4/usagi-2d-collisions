@@ -45,7 +45,11 @@ function Polygon:projection(normal)
 end
 
 function Polygon:point_in_space(corner)
-    return Vector2.new({ x = corner.x + self.x, y = corner.y + self.y })
+
+    local x_new = corner.x * math.cos(self.theta) - corner.y * math.sin(self.theta)
+    local y_new = corner.x * math.sin(self.theta) + corner.y * math.cos(self.theta)
+
+    return Vector2.new({ x = x_new + self.x, y = y_new + self.y })
 end
 
 function Polygon:calculate_points_in_space()
@@ -67,14 +71,14 @@ function Polygon:collides_on_my_axes(other, collision)
         local my_proj = self:projection(normal)
         local o_proj = other:projection(normal)
 
-        -- gfx.line(64 + 8 * (i + 1) + normal.x * my_proj.low / 1, 64 + 8 * (i + 1) + normal.y * my_proj.low / 1,
-        --     64 + 8 * (i + 1) + normal.x * my_proj.high / 1,
-        --     64 + 8 * (i + 1) + normal.y * my_proj.high / 1, colors[i])
+        -- gfx.line(64 + 4 * (i + 1) + normal.x * my_proj.low / 1, 64 + 4 * (i + 1) + normal.y * my_proj.low / 1,
+        --     64 + 4 * (i + 1) + normal.x * my_proj.high / 1,
+        --     64 + 4 * (i + 1) + normal.y * my_proj.high / 1, colors[i])
         -- gfx.line(
-        --     64 + 8 * (i + 1) + normal.x * o_proj.low / 1,
-        --     64 + 8 * (i + 1) + normal.y * o_proj.low / 1,
-        --     64 + 8 * (i + 1) + normal.x * o_proj.high / 1,
-        --     64 + 8 * (i + 1) + normal.y * o_proj.high / 1, colors[i]
+        --     64 + 4 * (i + 1) + normal.x * o_proj.low / 1,
+        --     64 + 4 * (i + 1) + normal.y * o_proj.low / 1,
+        --     64 + 4 * (i + 1) + normal.x * o_proj.high / 1,
+        --     64 + 4 * (i + 1) + normal.y * o_proj.high / 1, colors[i]
         -- )
 
         local penetration = my_proj:overlap(o_proj)
@@ -96,13 +100,18 @@ end
 
 function Polygon:collide_with(other)
     local collision = Collision_Result.new({})
+    local collision2 = Collision_Result.new({})
 
     local result = self:collides_on_my_axes(other, collision)
-    if result.occurred then
+    local result2 = other:collides_on_my_axes(self, collision2)
+    if result.occurred and result2.occurred then
+        result.penetration = math.min(result.penetration, result2.penetration)
+        result.occurred = true
         return result
     end
 
-    result = other:collides_on_my_axes(self, collision)
+    -- print(usagi.elapsed)
+    result.occurred = false
     return result
 end
 
@@ -112,6 +121,10 @@ end
 
 function Polygon:move_to(x, y)
     self.x, self.y = x, y
+end
+
+function Polygon:rotate_to(t)
+    self.theta = t
 end
 
 function Polygon:draw()
