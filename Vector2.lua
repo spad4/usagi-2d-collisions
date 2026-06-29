@@ -11,9 +11,11 @@ function Vector2:dot(other)
     return self.x * other.x + self.y * other.y
 end
 
-function Vector2:normal()
+function Vector2:normal_left()
+    return Vector2.new({x=-self.y, y = self.x})
+end
+function Vector2:normal_right()
     return Vector2.new({x=self.y, y = -self.x})
-
 end
 
 local function subtract(a, b)

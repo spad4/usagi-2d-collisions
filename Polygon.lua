@@ -14,7 +14,8 @@ local Polygon = {
 local Collision_Result = {
     occurred = false,
     penetration = math.maxinteger,
-    direction = { x = 0, y = 0 }
+    direction = { x = 0, y = 0 },
+    reference = nil
 }
 
 function Collision_Result.new(o)
@@ -146,7 +147,7 @@ function Polygon:collides_on_my_axes(other, collision)
     for i, point in pairs(self.points) do
 
         local tangent = Vector2.new(util.vec_normalize(point - prev_point))
-        local normal = tangent:normal()
+        local normal = tangent:normal_left()
 
         local my_proj = self:projection(normal)
         local o_proj = other:projection(normal)
@@ -166,6 +167,7 @@ function Polygon:collides_on_my_axes(other, collision)
             if penetration < collision.penetration then
                 collision.penetration = penetration
                 collision.direction = normal
+                collision.reference = self
             end
         else
             collision.occurred = false
@@ -174,6 +176,7 @@ function Polygon:collides_on_my_axes(other, collision)
         prev_point = point
     end
 
+    gfx.line(self.x, self.y, self.x + collision.direction.x * 8, self.y + collision.direction.y * 8, gfx.COLOR_TRUE_WHITE)
     collision.occurred = true
     return collision
 end
@@ -185,8 +188,43 @@ function Polygon:collision_with(other)
     local result = self:collides_on_my_axes(other, collision)
     local result2 = other:collides_on_my_axes(self, collision2)
     if result.occurred and result2.occurred then
-        result.penetration = math.min(result.penetration, result2.penetration)
+        -- other is the reference, self is the incident
+        local incident = self
+        if result.penetration > result2.penetration then
+            result = result2
+            other.color = gfx.COLOR_TRUE_WHITE
+            print("other")
+        else -- other is the incident, self is the reference
+            incident = other
+            self.color = gfx.COLOR_TRUE_WHITE
+            print("self")
+        end
         result.occurred = true
+        gfx.line(self.x, self.y, self.x + result.direction.x * 8, self.y + result.direction.y * 8, gfx.COLOR_TRUE_WHITE)
+        local incident_edge = 0
+        local incident_edge_succ = 0
+        local min_dot = math.maxinteger
+
+        -- finds the indices of the two points which produce the incident edge...
+        -- whose normal is most opposite of the penetration normal (lowest dot product)
+        local incident_prev = #incident.points
+        for i, point in pairs(incident.points) do
+            local prev_point = incident.points[incident_prev]
+            local normal_incident = Vector2.new(util.vec_normalize(point - prev_point)):normal_right()
+            local dot = result.direction:dot(normal_incident)
+            if dot < min_dot then
+                min_dot = dot
+                incident_edge = incident_prev
+                incident_edge_succ = i
+            end
+            incident_prev = i
+        end
+
+        local p1 = incident.points[incident_edge]
+        local p2 = incident.points[incident_edge_succ]
+        gfx.circ_fill(p1.x, p1.y, 2, 18)
+        gfx.circ_fill(p2.x, p2.y, 2, 18)
+
         return result
     end
 
@@ -213,14 +251,14 @@ function Polygon:draw()
         local p1 = self.points[i]
         local p2 = self.points[i == length and 1 or i + 1]
 
-        -- local hx = p1.x + (p2.x - p1.x) / 2
-        -- local hy = p1.y + (p2.y - p1.y) / 2
+        local hx = p1.x + (p2.x - p1.x) / 2
+        local hy = p1.y + (p2.y - p1.y) / 2
 
-        -- local tangent = Vector2.new(util.vec_normalize(p2 - p1))
-        -- local normal = tangent:normal()
+        local tangent = Vector2.new(util.vec_normalize(p2 - p1))
+        local normal = tangent:normal_right()
 
-        -- gfx.line(hx, hy, hx + normal.x * 16, hy + normal.y * 16, colors[((i-1) % #colors) + 1])
-        -- gfx.line(p1.x, p1.y, p2.x, p2.y, colors[((i-1) % #colors) + 1])
+        gfx.line(hx, hy, hx + normal.x * 8, hy + normal.y * 8, colors[((i-1) % #colors) + 1])
+        gfx.line(p1.x, p1.y, p2.x, p2.y, colors[((i-1) % #colors) + 1])
         gfx.line(p1.x, p1.y, p2.x, p2.y, self.color)
     end
 end
